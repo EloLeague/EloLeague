@@ -31,7 +31,7 @@ export default function Player({league, leagueTier, player, session}: {
     // if a is less (earlier) than b, a should come first
     let filteredGames = [];
 
-    if (games) {
+    if (games && games.length > 0) {
         games.sort(function(a,b){
             // Turn your strings into dates, and then subtract them
             // to get a value that is either negative, positive, or zero.
@@ -50,12 +50,12 @@ export default function Player({league, leagueTier, player, session}: {
         filteredGames.push(games[games.length - 1]);
     }
 
-    const chartData = games ? filteredGames.map(game => ({
+    const chartData = (games && games.length > 0) ? filteredGames.map(game => ({
         rating: game.player1 === player ? game.elo1_after : game.elo2_after,
         date: new Date(game.date).getTime(),
     })) : null;
     
-    const uniqueOpponents = games && games
+    const uniqueOpponents = (games && games.length > 0) && games
         .map(game => game.player1 === player ? game.player2 : game.player1)
         .filter((thisPlayer, i, a) => i === a.findIndex(d => d === thisPlayer));
     
@@ -81,34 +81,7 @@ export default function Player({league, leagueTier, player, session}: {
             </Link>
             <ElH1>Player: {player}</ElH1>
             <hr className="my-6"/>
-            {leagueTier === "free" ? (
-                <ElInfoBox>
-                    <ElH2>Upgrade for player profiles</ElH2>
-                    {isAdmin ? (
-                        <div className="flex items-center">
-                            <p className="mt-4 text-lg">Upgrade to a <b>club tier account</b> to enable player rating histories, head to head records, and more.</p>
-                            <ElButton className="ml-4 flex-shrink-0">Start free trial</ElButton>
-                        </div>
-                    ) : (
-                        <p className="mt-4 text-lg">Ask your league admin to upgrade to a <b>club tier account</b> to enable player rating histories, head to head records, and more.</p>
-                    )}
-                    <hr className="my-4"/>
-                    <div className="md:flex -mx-4">
-                        <div className="md:w-1/2 mx-4 pb-16 md:pb-0">
-                            <ElH3>Rating history</ElH3>
-                            <div className="mt-4 pr-4 border shadow-md bg-white">
-                                <ElRatingGraph chartData={sampleChartData}/>
-                            </div>
-                        </div>
-                        <div className="md:w-1/2 mx-4 pb-16 md:pb-0">
-                            <ElH3>Head to heads</ElH3>
-                            <div className="mt-4 px-4 mb-2 border shadow-md bg-white">
-                                <ElHeadToHeadsTable headToHeads={sampleHeadToHeads} player="Han"/>
-                            </div>
-                        </div>
-                    </div>
-                </ElInfoBox>
-            ) : (
+            {leagueTier === "club" ? (
                 <div className="md:flex -mx-4">
                     <div className="md:w-1/2 mx-4 pb-16">
                         <ElH3>Rating history</ElH3>
@@ -130,6 +103,33 @@ export default function Player({league, leagueTier, player, session}: {
                         )}
                     </div>
                 </div>
+            ) : (
+                <ElInfoBox>
+                    <ElH2>Upgrade for player profiles</ElH2>
+                    {isAdmin ? (
+                        <div className="flex items-center">
+                            <p className="mt-4 text-lg">Upgrade to a <b>club tier account</b> to enable player rating histories, head to head records, and more.</p>
+                            <ElButton className="ml-4 flex-shrink-0" href="/pricing">{(session && session.trialUsed) ? "Upgrade" : "Start free trial"}</ElButton>
+                        </div>
+                    ) : (
+                        <p className="mt-4 text-lg">Ask your league admin to upgrade to a <b>club tier account</b> to enable player rating histories, head to head records, and more.</p>
+                    )}
+                    <hr className="my-4"/>
+                    <div className="md:flex -mx-4">
+                        <div className="md:w-1/2 mx-4 pb-16 md:pb-0">
+                            <ElH3>Rating history (sample data)</ElH3>
+                            <div className="mt-4 pr-4 border shadow-md bg-white">
+                                <ElRatingGraph chartData={sampleChartData}/>
+                            </div>
+                        </div>
+                        <div className="md:w-1/2 mx-4 pb-16 md:pb-0">
+                            <ElH3>Head to heads (sample data)</ElH3>
+                            <div className="mt-4 px-4 mb-2 border shadow-md bg-white">
+                                <ElHeadToHeadsTable headToHeads={sampleHeadToHeads} player="Han"/>
+                            </div>
+                        </div>
+                    </div>
+                </ElInfoBox>
             )}
             <ElFooterCTA noDisplay={!!(isAdmin || session)}/>
         </div>

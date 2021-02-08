@@ -2,6 +2,7 @@ import {GetServerSideProps} from "next";
 import {GameObj, LeagueObj, PlayerStandingObj, SessionObj} from "../../utils/types";
 import {getSession} from "next-auth/client";
 import {createClient} from "@supabase/supabase-js";
+import {useRouter} from "next/router";
 import ElH1 from "../../components/ElH1";
 import ElButton from "../../components/ElButton";
 import React, {useState} from "react";
@@ -20,8 +21,11 @@ import Select from "react-select";
 import ElFooterCTA from "../../components/ElFooterCTA";
 import ElInfoBox from "../../components/ElInfoBox";
 import ElNextSeo from "../../components/ElNextSeo";
+import ElTab from "../../components/ElTab";
 
 export default function LeagueIndex({league, session}: {league: LeagueObj, session: SessionObj}) {
+    const router = useRouter();
+
     const isAdmin = session && (+league.user_id === +session.userId);
     const [newGameOpen, setNewGameOpen] = useState<boolean>(false);
     const [player1, setPlayer1] = useState<string>("");
@@ -34,36 +38,86 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
     const [newPlayerOpen, setNewPlayerOpen] = useState<boolean>(false);
     const [newPlayerLoading, setNewPlayerLoading] = useState<boolean>(false);
     const [newPlayerName, setNewPlayerName] = useState<string>("");
+    const [deleteLeagueOpen, setDeleteLeagueOpen] = useState<boolean>(false);
+    const [deleteLeagueLoading, setDeleteLeagueLoading] = useState<boolean>(false);
     const [gameIteration, setGameIteration] = useState<number>(0);
     const [playerIteration, setPlayerIteration] = useState<number>(0);
     const [unauth, setUnauth] = useState<boolean>(false);
     const [unauthMessage, setUnauthMessage] = useState<string>("");
+    const [deleteGameOpen, setDeleteGameOpen] = useState<boolean>(false);
+    const [deleteGameLoading, setDeleteGameLoading] = useState<boolean>(false);
+    const [selectedGame, setSelectedGame] = useState<number>(null);
+    const [newGameTab, setNewGameTab] = useState<"single" | "multiple" | "bulk">("single");
+    const [bulkGames, setBulkGames] = useState<{
+        player1: string,
+        score1: number,
+        player2: string,
+        score2: number,
+    }[]>(null);
     const {data: games, error: gamesError}: responseInterface<GameObj[], any> = useSWR(`/api/game/list?leagueId=${league.id}&iter=${gameIteration}`, fetcher);
     const {data: playerRatings, error: playerRatingsError}: responseInterface<PlayerStandingObj[], any> = useSWR(`api/league/standings?leagueId=${league.id}&?iter=${playerIteration}`, fetcher);
 
     function onSubmitGame() {
         setNewGameLoading(true);
         setUnauth(false);
-        axios.post("/api/game/new", {
-            player1: player1,
-            score1: score1.toString(),
-            player2: player2,
-            score2: score2.toString(),
-            code: code,
-            leagueId: league.id,
-        }).then((res: AxiosResponse) => {
-            setNewGameLoading(false);
-            setGameIteration(gameIteration + 1);
-            setPlayerIteration(playerIteration + 1);
-            onCancelSubmitGame();
-        }).catch((e: AxiosError) => {
-            setNewGameLoading(false);
-            if (e.response.status === 403) {
-                setUnauth(true);
-                setUnauthMessage(e.response.data.message)
+
+        if (newGameTab === "single") {
+            axios.post("/api/game/new", {
+                player1: player1,
+                score1: score1.toString(),
+                player2: player2,
+                score2: score2.toString(),
+                code: code,
+                leagueId: league.id,
+            }).then((res: AxiosResponse) => {
+                afterSubmit();
+            }).catch((e: AxiosError) => {
+                handleSubmitError(e);
+            });
+        } else {
+            let games = [];
+            if (newGameTab === "bulk") {
+                const lines = csvImportText.split("\n");
+                lines.forEach(line => {
+                    const values = line.split(",");
+                    const game = {
+                        date: values[0],
+                        player1: values[1],
+                        player2: values[2],
+                        score1: +values[3],
+                        score2: +values[4],
+                    };
+                    games.push(game);
+                });
+            } else {
+                games = bulkGames.map(game => ({date: new Date().toISOString(), ...game}));
             }
-            console.log(e);
-        });
+
+            axios.post("/api/game/upload", {
+                gameObjArray: games,
+                leagueId: league.id
+            }).then(() => {
+                afterSubmit();
+            }).catch((e: AxiosError) => {
+                handleSubmitError(e);
+            });
+        }        
+    }
+    
+    function afterSubmit() {
+        setNewGameLoading(false);
+        setGameIteration(gameIteration + 1);
+        setPlayerIteration(playerIteration + 1);
+        onCancelSubmitGame();
+    }
+    
+    function handleSubmitError(e: AxiosError) {
+        setNewGameLoading(false);
+        if (e.response.status === 403) {
+            setUnauth(true);
+            setUnauthMessage(e.response.data.message)
+        }
+        console.log(e);
     }
 
     function onCancelSubmitGame() {
@@ -74,6 +128,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         setCode("");
         setUnauth(false);
         setUnauthMessage("");
+        setCsvImportText("");
         setNewGameOpen(false);
     }
 
@@ -85,7 +140,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
             leagueId: league.id,
             name: newPlayerName,
             code: code
-        }).then(res => {
+        }).then(() => {
             // change dummy param to trigger standings re-query
             setPlayerIteration(playerIteration + 1);
             setNewPlayerLoading(false);
@@ -108,29 +163,49 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         setCode("");
     }
 
-    function csvImport () {
-        let games = [];
-        const lines = csvImportText.split("\n");
-        lines.forEach(line => {
-            const values = line.split(",");
-            const game = {
-                league_id: league.id,
-                date: values[0],
-                player1: values[1],
-                player2: values[2],
-                score1: +values[3],
-                score2: +values[4],
+    function onDeleteGame() {
+        setDeleteGameLoading(true);
+
+        axios.delete("/api/game/delete", {
+            data: {
+                code: code || "",
+                leagueId: league.id,
+                gameId: selectedGame,
             }
-            games.push(game);
+        }).then(() => {
+            setDeleteGameLoading(false);
+            onDeleteCancel();
+            setGameIteration(gameIteration + 1);
+            setPlayerIteration(playerIteration + 1);
+        }).catch(e => {
+            console.log(e);
+            setDeleteGameLoading(false);
         });
+    }
 
-        axios.post("/api/game/upload", {
-            gameObjArray: games,
-            leagueId: league.id
-        }).then(res => {
+    function onDeleteCancel() {
+        setDeleteGameOpen(false);
+        setCode("");
+        setSelectedGame(null);
+    }
 
-        }).catch((e: AxiosError) => {
+    function onCancelDeleteLeague() {
+        setDeleteLeagueOpen(false);
+    }
 
+    function onDeleteLeague() {
+        setDeleteLeagueLoading(true);
+        axios.delete("/api/league/delete", {
+            data: {
+                leagueId: league.id,
+            }
+        }).then(() => {
+            setDeleteLeagueLoading(false);
+            onCancelDeleteLeague();
+            router.push("/dashboard");
+        }).catch(e => {
+            console.log(e);
+            setDeleteLeagueLoading(false);
         });
     }
 
@@ -140,10 +215,6 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
     return (
         <div className="max-w-4xl mx-auto px-4 pb-12">
             <ElNextSeo title={"League: " + league.name}/>
-
-            {/*<textarea placeholder="Enter each game on a new line, following this format: date,player1,player2,score1,score2" value={csvImportText} onChange={(e) => setCsvImportText(e.target.value)}/>*/}
-            {/*<button onClick={csvImport}> CSV IMPORT </button>*/}
-
             {isAdmin && (
                 <Link href="/dashboard">
                     <a className="flex items-center mt-8">
@@ -152,8 +223,31 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                     </a>
                 </Link>
             )}
-            <ElH1>League: {league.name}</ElH1>
-            <p className="text-lg">{league.description || ""}</p>
+            
+            <div className="flex items-baseline">
+                <div>
+                    <ElH1>League: {league.name}</ElH1>
+                    <p className="text-lg">{league.description || ""}</p>
+                </div>
+                {
+                    isAdmin && <div className="ml-auto mb-6">
+                        <ElButton onClick={() => setDeleteLeagueOpen(true)}>
+                            Delete League
+                        </ElButton>
+                        <ElModal isOpen={deleteLeagueOpen} closeModal={onCancelDeleteLeague}>
+                            <ElH2>Delete League {league.name}</ElH2>
+                            <p className="mt-8 mb-8">Are you sure you want to delete league {league.name}? This action cannot be undone.</p>
+                            <ElButton onClick={onDeleteLeague} isLoading={deleteLeagueLoading}>
+                                Delete
+                            </ElButton>
+                            <ElButton text={true} onClick={onCancelDeleteLeague} disabled={deleteLeagueLoading}>
+                                Cancel
+                            </ElButton>
+                        </ElModal>
+                    </div>
+                }
+            </div>
+            
             {isAdmin ? (
                 <ElInfoBox className="my-4">
                     <div className="flex items-center">
@@ -245,42 +339,72 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                             </ElButton>
                             <ElModal isOpen={newGameOpen} closeModal={onCancelSubmitGame}>
                                 <ElH2>Log new game</ElH2>
-                                <hr className="my-6"/>
-                                <div className="flex -mx-2">
-                                    <div className="mx-2 w-1/2">
-                                        <ElH3>Player 1</ElH3>
-                                        <Select
-                                            value={{label: player1, value: player1}}
-                                            onChange={selected => {
-                                                setPlayer1(selected.value);
-                                            }}
-                                            options={league.players.map(player => ({label: player, value: player}))}
-                                            filterOption={label => label !== player2}
-                                            className="w-full my-2"
-                                        />
-                                    </div>
-                                    <div className="mx-2 w-1/2">
-                                        <ElH3>P1 score</ElH3>
-                                        <ElInput value={score1} setValue={setScore1} type="number"/>
-                                    </div>
+                                <div className="my-6 flex">
+                                    <ElTab selected={newGameTab === "single"} onClick={() => setNewGameTab("single")}>Single</ElTab>
+                                    {/*<ElTab selected={newGameTab === "multiple"} onClick={() => setNewGameTab("multiple")}>Multiple</ElTab>*/}
+                                    <ElTab selected={newGameTab === "bulk"} onClick={() => setNewGameTab("bulk")}>Bulk</ElTab>
                                 </div>
-                                <hr className="my-6"/>
-                                <div className="flex -mx-2">
-                                    <div className="mx-2 w-1/2">
-                                        <ElH3>Player 2</ElH3>
-                                        <Select
-                                            value={{label: player2, value: player2}}
-                                            onChange={selected => setPlayer2(selected.value)}
-                                            options={league.players.map(player => ({label: player, value: player}))}
-                                            filterOption={({label}) => label !== player1}
-                                            className="w-full my-2"
+                                {newGameTab === "single" ? (
+                                    <>
+                                        <div className="flex -mx-2">
+                                            <div className="mx-2 w-1/2">
+                                                <ElH3>Player 1</ElH3>
+                                                <Select
+                                                    value={{label: player1, value: player1}}
+                                                    onChange={selected => {
+                                                        setPlayer1(selected.value);
+                                                    }}
+                                                    options={playerRatings ? playerRatings.map(player => ({label: player.name, value: player.name})): []}
+                                                    filterOption={label => label !== player2}
+                                                    className="w-full my-2"
+                                                />
+                                            </div>
+                                            <div className="mx-2 w-1/2">
+                                                <ElH3>P1 score</ElH3>
+                                                <ElInput value={score1} setValue={setScore1} type="number"/>
+                                            </div>
+                                        </div>
+                                        <hr className="my-6"/>
+                                        <div className="flex -mx-2">
+                                            <div className="mx-2 w-1/2">
+                                                <ElH3>Player 2</ElH3>
+                                                <Select
+                                                    value={{label: player2, value: player2}}
+                                                    onChange={selected => setPlayer2(selected.value)}
+                                                    options={playerRatings ? playerRatings.map(player => ({label: player.name, value: player.name})) : []}
+                                                    filterOption={({label}) => label !== player1}
+                                                    className="w-full my-2"
+                                                />
+                                            </div>
+                                            <div className="mx-2 w-1/2">
+                                                <ElH3>P2 score</ElH3>
+                                                <ElInput value={score2} setValue={setScore2} type="number"/>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : newGameTab === "multiple" ? (
+                                    <>
+                                        {bulkGames.map(game => (
+                                            <div className="flex">
+
+                                            </div>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="my-6">
+                                            Enter each game on a new line, following this format: <code>date (ISO string),player1,player2,score1,score2</code>
+                                        </p>
+                                        <textarea
+                                            className="w-full p-2 border"
+                                            style={{minWidth: 300}}
+                                            placeholder="Enter your games here"
+                                            value={csvImportText}
+                                            rows={5}
+                                            onChange={(e) => setCsvImportText(e.target.value)}
                                         />
-                                    </div>
-                                    <div className="mx-2 w-1/2">
-                                        <ElH3>P2 score</ElH3>
-                                        <ElInput value={score2} setValue={setScore2} type="number"/>
-                                    </div>
-                                </div>
+                                    </>
+                                )}
                                 <hr className="my-6"/>
                                 {!isAdmin && (
                                     <>
@@ -294,7 +418,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                     </>
                                 )}
                                 <ElButton onClick={onSubmitGame} isLoading={newGameLoading}>
-                                    Create
+                                    Add
                                 </ElButton>
                                 <ElButton text={true} onClick={onCancelSubmitGame} disabled={newGameLoading}>
                                     Cancel
@@ -309,7 +433,14 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                     <p className="border-b-2 pb-2 mt-6 text-gray-400">{format(new Date(game.date), "EEEE, MMMM d, yyyy")}</p>
                                 )}
                                 <div className="py-4 border-b">
-                                    <p className="text-sm opacity-50 text-center">{format(new Date(game.date), "h:mm a")}</p>
+                                    <p className="text-sm opacity-50 text-center">
+                                        {format(new Date(game.date), "h:mm a")}
+                                        <span> | </span>
+                                        <button className="underline" onClick={() => {
+                                            setSelectedGame(game.id);
+                                            setDeleteGameOpen(true);
+                                        }}>Delete</button>
+                                    </p>
                                     <div className="flex items-center">
                                         <div className="w-1/3">
                                             <Link href={`/${league.url_name}/${game.player1}`}>
@@ -346,6 +477,16 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                         </div>
                     )}
                 </div>
+                <ElModal isOpen={deleteGameOpen} closeModal={onDeleteCancel}>
+                    <ElH2>Delete game</ElH2>
+                    <p className="my-6">Are you sure you want to delete this game?</p>
+                    <ElButton onClick={onDeleteGame} isLoading={deleteGameLoading}>
+                        Delete
+                    </ElButton>
+                    <ElButton text={true} onClick={onDeleteCancel} disabled={deleteGameLoading}>
+                        Cancel
+                    </ElButton>
+                </ElModal>
             </div>
             <ElFooterCTA noDisplay={!!(isAdmin || session)}/>
         </div>

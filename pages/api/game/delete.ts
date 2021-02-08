@@ -9,11 +9,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // check for missing fields
     if (!req.body.leagueId) return res.status(406).json({message: "Missing leagueId field"});
-    if (!req.body.gameId) return res.status(406).json({message: "Missing gameId field"});
 
     // check auth
-    // const session = await getSession({req});
-    // if (!session && !req.body.code) return res.status(403).json({message: "You must have an access code or be logged in to create a league."});
+    const session = await getSession({req});
+    if (!session && !req.body.code) return res.status(403).json({message: "You must have an access code or be logged in to create a league."});
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
     const {data: leagues, error: leagueError} = await supabase
@@ -22,17 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("id", req.body.leagueId);
     if (leagues.length === 0) return res.status(404).json({message: "League not found"});
 
-    const {data: games, error: gamesError} = await supabase
-        .from<GameObj>("Games")
-        .select("*")
-        .eq("id", req.body.gameId);
-    if (games.length === 0) return res.status(404).json({message: "Game not found"});
-
-    // if (req.body.code && req.body.code !== leagues[0].code) {
-    //     return res.status(403).json({message: "Invalid access code."});
-    // } else if (leagues[0].user_id !== session.userId) {
-    //     return res.status(403).json({message: "You must be the league admin to create a game without a code."});
-    // }
+    if (req.body.code && req.body.code !== leagues[0].code) {
+        return res.status(403).json({message: "Invalid access code."});
+    } else if (leagues[0].user_id !== session.userId) {
+        return res.status(403).json({message: "You must be the league admin to create a game without a code."});
+    }
 
     // delete game 
     const {data: deleteGame, error: deleteGameError} = await supabase 
@@ -91,8 +84,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         game.elo2_before = elo2before
         game.elo1_after = elo1after
         game.elo2_after = elo2after
-        console.log("Game will be updated to...")
-        console.log(game);
         
         // update game with new elo's
         const {data: updateGame, error: updateGameError} = await supabase 

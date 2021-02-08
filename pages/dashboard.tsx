@@ -121,12 +121,10 @@ export default function Dashboard(props: {session: SessionObj}) {
             <ElModal isOpen={newLeagueOpen} closeModal={onCancelCreateLeague}>
                 <ElH2>New league</ElH2>
                 <p className="my-2">
-                    Leagues left in your <b>{props.session.tier}</b> plan: {props.session.tier === "free" ? (
-                        (leagues ?
-                            0 :
-                            props.session.numAllowedLeagues - (leagues && leagues.length) > 0 ? props.session.numAllowedLeagues - (leagues && leagues.length) : 0)
-                        + "/" + props.session.numAllowedLeagues
-                    ) : "unlimited"}
+                    Leagues left in your <b>{props.session.tier}</b> plan: {props.session.tier === "free" ?
+                        (leaguesLeft + "/" + props.session.numAllowedLeagues)
+                        : "unlimited"
+                    }
                 </p>
                 <hr className="my-6"/>
                 {((leagues && (leagues.length < props.session.numAllowedLeagues)) || props.session.tier !== "free")  ? (
@@ -163,8 +161,8 @@ export default function Dashboard(props: {session: SessionObj}) {
                     </>
                 ) : (
                     <>
-                        <p>Upgrade to an Individual or Club plan to create more leagues.</p>
-                        <ElButton className="mt-4">Start free trial</ElButton>
+                        <p>Upgrade to an <b>Individual</b> or <b>Club</b> plan to create more leagues.</p>
+                        <ElButton className="mt-4" href="/pricing">Start free trial</ElButton>
                     </>
                 )}
             </ElModal>

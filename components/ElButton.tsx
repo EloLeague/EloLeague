@@ -16,7 +16,7 @@ export default function ElButton({onClick, disabled, isLoading, href, text = fal
 
     return href ? (
         <Link href={href}>
-            <a className={ElButtonStyling + " " + className}>{children}</a>
+            <a className={ElButtonStyling + " " + className} style={{display: "inline-block"}}>{children}</a>
         </Link>
     ) : (
         <button onClick={onClick} disabled={disabled || isLoading} className={ElButtonStyling + " " + className}>

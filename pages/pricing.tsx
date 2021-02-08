@@ -6,6 +6,8 @@ import React, {useState} from "react";
 import axios from "axios";
 import {loadStripe} from "@stripe/stripe-js/pure";
 import ElNextSeo from "../components/ElNextSeo";
+import ElInfoBox from "../components/ElInfoBox";
+import {BiInfoCircle} from "react-icons/bi";
 
 export default function Pricing() {
     const [session, loading] = useSession();
@@ -41,6 +43,16 @@ export default function Pricing() {
         <div className="max-w-4xl mx-auto px-4 py-4">
             <ElNextSeo title="Pricing"/>
             <ElH1>{session ? "Upgrade" : "Pricing"}</ElH1>
+            {session && (
+                <ElInfoBox className="my-4">
+                    <div className="flex items-center">
+                        <BiInfoCircle className="flex-shrink-0"/>
+                        <p className="text-lg ml-4">
+                            You are currently on a <b>{session.tier}</b> plan.
+                        </p>
+                    </div>
+                </ElInfoBox>
+            )}
             <hr className="my-6"/>
             <div className="md:flex -mx-4">
                 <div className={priceContainerClass}>
@@ -63,8 +75,9 @@ export default function Pricing() {
                         className={priceButtonClass}
                         onClick={() => createCheckoutSession("individual")}
                         isLoading={individualLoading}
+                        disabled={session && session.tier !== "free"}
                     >
-                        Start free trial
+                        {((session && session.trialUsed) ? "Upgrade" : "Start free trial")}
                     </ElButton>
                 </div>
                 <div className={priceContainerClass}>
@@ -72,14 +85,16 @@ export default function Pricing() {
                     <p className={priceClass}>$30/month</p>
                     <ul className={priceDescriptClass}>
                         <li>Unlimited leagues</li>
-                        <li>Unlimited tournaments</li>
+                        <li>Player profiles</li>
+                        <li>Player head to heads</li>
                     </ul>
                     <ElButton
                         className={priceButtonClass}
                         onClick={() => createCheckoutSession("club")}
                         isLoading={clubLoading}
+                        disabled={session && session.tier === "club"}
                     >
-                        Start free trial
+                        {((session && session.trialUsed) ? "Upgrade" : "Start free trial")}
                     </ElButton>
                 </div>
             </div>
