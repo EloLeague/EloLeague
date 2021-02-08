@@ -21,11 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("id", req.body.leagueId);
     if (leagues.length === 0) return res.status(404).json({message: "League not found"});
 
-    if (req.body.code && req.body.code !== leagues[0].code) {
-        return res.status(403).json({message: "Invalid access code."});
-    } else if (leagues[0].user_id !== session.userId) {
-        return res.status(403).json({message: "You must be the league admin to create a game without a code."});
-    }
+    const validCode = req.body.code && req.body.code !== leagues[0].code;
+    const validSession = session && (leagues[0].user_id !== session.userId);
+
+    if (!(validCode || validSession)) return res.status(403).json({message: "Invalid access code or authorization."});
 
     // delete game 
     const {data: deleteGame, error: deleteGameError} = await supabase 

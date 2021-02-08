@@ -148,7 +148,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         }).catch((e: AxiosError) => {
             setNewPlayerLoading(false);
             if (e.response.status === 403) {
-                setUnauthMessage(e.response.data.message)
+                setUnauthMessage(e.response.data.message);
                 setUnauth(true);
             }
             console.log(e);
@@ -179,6 +179,10 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
             setPlayerIteration(playerIteration + 1);
         }).catch(e => {
             console.log(e);
+            if (e.response.status === 403) {
+                setUnauthMessage(e.response.data.message);
+                setUnauth(true);
+            }
             setDeleteGameLoading(false);
         });
     }
@@ -187,6 +191,8 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         setDeleteGameOpen(false);
         setCode("");
         setSelectedGame(null);
+        setUnauth(false);
+        setUnauthMessage("");
     }
 
     function onCancelDeleteLeague() {
@@ -198,6 +204,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         axios.delete("/api/league/delete", {
             data: {
                 leagueId: league.id,
+                accessCode: code || "",
             }
         }).then(() => {
             setDeleteLeagueLoading(false);
@@ -435,11 +442,11 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                 <div className="py-4 border-b">
                                     <p className="text-sm opacity-50 text-center">
                                         {format(new Date(game.date), "h:mm a")}
-                                        <span> | </span>
-                                        <button className="underline" onClick={() => {
-                                            setSelectedGame(game.id);
-                                            setDeleteGameOpen(true);
-                                        }}>Delete</button>
+                                        {/*<span> | </span>*/}
+                                        {/*<button className="underline" onClick={() => {*/}
+                                        {/*    setSelectedGame(game.id);*/}
+                                        {/*    setDeleteGameOpen(true);*/}
+                                        {/*}}>Delete</button>*/}
                                     </p>
                                     <div className="flex items-center">
                                         <div className="w-1/3">
@@ -480,6 +487,18 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                 <ElModal isOpen={deleteGameOpen} closeModal={onDeleteCancel}>
                     <ElH2>Delete game</ElH2>
                     <p className="my-6">Are you sure you want to delete this game?</p>
+                    <hr className="my-6"/>
+                    {!isAdmin && (
+                        <>
+                            <ElH3>Access code</ElH3>
+                            <p>Ask your league admin for the access code.</p>
+                            <ElInput value={code} setValue={setCode}/>
+                            {unauth && (
+                                <p className="my-2 text-red-500">{unauthMessage}</p>
+                            )}
+                            <hr className="my-6"/>
+                        </>
+                    )}
                     <ElButton onClick={onDeleteGame} isLoading={deleteGameLoading}>
                         Delete
                     </ElButton>
