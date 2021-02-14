@@ -442,11 +442,11 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                 <div className="py-4 border-b">
                                     <p className="text-sm opacity-50 text-center">
                                         {format(new Date(game.date), "h:mm a")}
-                                        {/*<span> | </span>*/}
-                                        {/*<button className="underline" onClick={() => {*/}
-                                        {/*    setSelectedGame(game.id);*/}
-                                        {/*    setDeleteGameOpen(true);*/}
-                                        {/*}}>Delete</button>*/}
+                                        <span> | </span>
+                                        <button className="underline" onClick={() => {
+                                            setSelectedGame(game.id);
+                                            setDeleteGameOpen(true);
+                                        }}>Delete</button>
                                     </p>
                                     <div className="flex items-center">
                                         <div className="w-1/3">

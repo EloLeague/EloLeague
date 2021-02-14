@@ -32,6 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .delete()
         .match({ id: req.body.gameId })
 
+    const gameDate = deleteGame[0].date
+
     // recalculate ELOs
 
     // get all games and sort games by ascending date
@@ -42,10 +44,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from<GameObj>("Games")
         .select("*")
         .eq("league_id", +req.body.leagueId)
+        .gte('date', gameDate)
         .order("date", {ascending: true})
     
     // all games is sorted in ascending order, meaning the earliest games come first
-    allGames.forEach(async (game: GameObj) => {
+    for (let i = 0; i < allGames.length; i++) {
+        let game = allGames[i] 
         // get the current games players
         let player1 = game.player1
         let player2 = game.player2 
@@ -76,10 +80,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const elo2after = elo2before + 20 * (+(+game.score2 > +game.score1) - expected2);
         
         // set this games fields
-        game.elo1_before = elo1before
-        game.elo2_before = elo2before
-        game.elo1_after = elo1after
-        game.elo2_after = elo2after
+        allGames[i].elo1_before = elo1before
+        allGames[i].elo2_before = elo2before
+        allGames[i].elo1_after = elo1after
+        allGames[i].elo2_after = elo2after
         
         // update game with new elo's
         const {data: updateGame, error: updateGameError} = await supabase 
@@ -91,8 +95,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 elo2_after: elo2after
              })
             .match({ id: "" + game.id })
-            
-    });
-
+        
+    }
+    
     return res.status(200).json({});
 }
