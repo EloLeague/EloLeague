@@ -80,29 +80,35 @@ export default function Player({league, leagueTier, player, session}: {
                 </a>
             </Link>
             <ElH1>Player: {player}</ElH1>
-            <hr className="my-6"/>
             {leagueTier === "club" ? (
-                <div className="md:flex -mx-4">
-                    <div className="md:w-1/2 mx-4 pb-16">
-                        <ElH3>Rating history</ElH3>
-                        {chartData ? (
-                            <ElRatingGraph chartData={chartData}/>
-                        ) : (
-                            <div className="my-4">
-                                <Skeleton count={1} style={{height: 400}}/>
-                            </div>
-                        )}
-                    </div>
-                    <div className="md:w-1/2 mx-4 pb-16">
-                        <ElH3>Head to heads</ElH3>
-                        <ElHeadToHeadsTable headToHeads={headToHeads} player={player} leagueUrl={league.url_name}/>
-                        {!headToHeads && (
-                            <div className="my-4">
-                                <Skeleton count={3} className="h-14"/>
-                            </div>
-                        )}
-                    </div>
+             <>
+                <div className="flex">
+                    <p className="mr-10">Games Played: {games && games.length}</p>
+                    <p>Win Percentage: {games && (games.filter(g => g.winner == player).length/games.length * 100).toFixed(2)}%</p>
                 </div>
+                <hr className="my-6"/>
+                    <div className="md:flex -mx-4">
+                        <div className="md:w-1/2 mx-4 pb-16">
+                            <ElH3>Rating history</ElH3>
+                            {chartData ? (
+                                <ElRatingGraph chartData={chartData}/>
+                            ) : (
+                                <div className="my-4">
+                                    <Skeleton count={1} style={{height: 400}}/>
+                                </div>
+                            )}
+                        </div>
+                        <div className="md:w-1/2 mx-4 pb-16">
+                            <ElH3>Head to heads</ElH3>
+                            <ElHeadToHeadsTable headToHeads={headToHeads} player={player} leagueUrl={league.url_name}/>
+                            {!headToHeads && (
+                                <div className="my-4">
+                                    <Skeleton count={3} className="h-14"/>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
             ) : (
                 <ElInfoBox>
                     <ElH2>Upgrade for player profiles</ElH2>

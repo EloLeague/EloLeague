@@ -22,6 +22,8 @@ import ElFooterCTA from "../../components/ElFooterCTA";
 import ElInfoBox from "../../components/ElInfoBox";
 import ElNextSeo from "../../components/ElNextSeo";
 import ElTab from "../../components/ElTab";
+import ElCopy from "../../components/ElCopy";
+import { ToastProvider } from "react-toast-notifications";
 
 export default function LeagueIndex({league, session}: {league: LeagueObj, session: SessionObj}) {
     const router = useRouter();
@@ -216,6 +218,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         });
     }
 
+
     const thClass = "font-normal pb-2";
     const tdClass = "py-4 border-b";
 
@@ -233,8 +236,12 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
             
             <div className="flex items-baseline">
                 <div>
-                    <ElH1>League: {league.name}</ElH1>
+                    <div className="flex items-baseline">
+                        <ElH1>{league.name}</ElH1>
+                            <ElCopy text={`eloleague.com/${league.url_name}`} className="ml-5"/>
+                    </div>
                     <p className="text-lg">{league.description || ""}</p>
+                    <p className="text-lg">Games Played: {games && games.length}</p>
                 </div>
                 {
                     isAdmin && <div className="ml-auto mb-6">
@@ -260,7 +267,8 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                     <div className="flex items-center">
                         <BiInfoCircle className="flex-shrink-0"/>
                         <p className="text-lg ml-4">
-                            You are an admin of this league. Share the current url ({`eloleague.com/${league.url_name}`}) and access code (<span className="el-font-display">{league.code}</span>) with players for them to log games.
+                            You are an admin of this league. Share the current url ({`eloleague.com/${league.url_name}`}) and access code (<span className="el-font-display">{league.code}</span> <ElCopy text={league.code} className="m-1" size={20}/>)
+                            with players for them to log games.
                         </p>
                     </div>
                 </ElInfoBox>
@@ -442,11 +450,11 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                 <div className="py-4 border-b">
                                     <p className="text-sm opacity-50 text-center">
                                         {format(new Date(game.date), "h:mm a")}
-                                        {/*<span> | </span>*/}
-                                        {/*<button className="underline" onClick={() => {*/}
-                                        {/*    setSelectedGame(game.id);*/}
-                                        {/*    setDeleteGameOpen(true);*/}
-                                        {/*}}>Delete</button>*/}
+                                        <span> | </span>
+                                        <button className="underline" onClick={() => {
+                                            setSelectedGame(game.id);
+                                            setDeleteGameOpen(true);
+                                        }}>Delete</button>
                                     </p>
                                     <div className="flex items-center">
                                         <div className="w-1/3">

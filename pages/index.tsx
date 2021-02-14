@@ -2,6 +2,7 @@ import {useSession} from "next-auth/client";
 import Head from "next/head";
 import React from "react";
 import {NextSeo} from "next-seo";
+import { ToastProvider } from 'react-toast-notifications';
 
 export default function Home() {
     const [session, loading] = useSession();

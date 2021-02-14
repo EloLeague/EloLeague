@@ -25,8 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq("id", req.body.leagueId);
     if (leagues.length === 0) return res.status(404).json({message: "League not found"});
 
-    const validCode = req.body.code && req.body.code !== leagues[0].code;
-    const validSession = session && (leagues[0].user_id !== session.userId);
+    const validCode = req.body.code && req.body.code === leagues[0].code;
+    const validSession = session && (leagues[0].user_id === session.userId);
 
     if (!(validCode || validSession)) return res.status(403).json({message: "Invalid access code or authorization."});
 

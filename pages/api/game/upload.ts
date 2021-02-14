@@ -10,7 +10,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // check for missing fields
     if (!req.body.leagueId) return res.status(406).json({message: "Missing leagueId field"});
     if (!req.body.gameObjArray) return res.status(406).json({message: "Missing game object array"});
-    console.log(req.body.gameObjArray)
     // check auth
     const session = await getSession({req});
      if (!session && !req.body.code) return res.status(403).json({message: "You must have an access code or be logged in to upload games data."});

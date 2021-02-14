@@ -28,6 +28,7 @@
     "react-loading-skeleton": "^2.1.1",
     "react-modal": "^3.12.1",
     "react-select": "^4.0.2",
+    "react-toast-notifications": "^2.4.3",
     "recharts": "^2.0.4",
     "stripe": "^8.132.0",
     "swr": "^0.4.1",
