@@ -23,7 +23,7 @@ import ElInfoBox from "../../components/ElInfoBox";
 import ElNextSeo from "../../components/ElNextSeo";
 import ElTab from "../../components/ElTab";
 import ElCopy from "../../components/ElCopy";
-import { ToastProvider } from "react-toast-notifications";
+import {AiFillCopy, AiFillDelete} from "react-icons/ai";
 
 export default function LeagueIndex({league, session}: {league: LeagueObj, session: SessionObj}) {
     const router = useRouter();
@@ -55,7 +55,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
         score1: number,
         player2: string,
         score2: number,
-    }[]>(null);
+    }[]>([{player1: "", score1: 0, player2: "", score2: 0}]);
     const {data: games, error: gamesError}: responseInterface<GameObj[], any> = useSWR(`/api/game/list?leagueId=${league.id}&iter=${gameIteration}`, fetcher);
     const {data: playerRatings, error: playerRatingsError}: responseInterface<PlayerStandingObj[], any> = useSWR(`api/league/standings?leagueId=${league.id}&?iter=${playerIteration}`, fetcher);
 
@@ -97,7 +97,8 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
 
             axios.post("/api/game/upload", {
                 gameObjArray: games,
-                leagueId: league.id
+                leagueId: league.id,
+                code: code,
             }).then(() => {
                 afterSubmit();
             }).catch((e: AxiosError) => {
@@ -356,7 +357,7 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                 <ElH2>Log new game</ElH2>
                                 <div className="my-6 flex">
                                     <ElTab selected={newGameTab === "single"} onClick={() => setNewGameTab("single")}>Single</ElTab>
-                                    {/*<ElTab selected={newGameTab === "multiple"} onClick={() => setNewGameTab("multiple")}>Multiple</ElTab>*/}
+                                    <ElTab selected={newGameTab === "multiple"} onClick={() => setNewGameTab("multiple")}>Multiple</ElTab>
                                     <ElTab selected={newGameTab === "bulk"} onClick={() => setNewGameTab("bulk")}>Bulk</ElTab>
                                 </div>
                                 {newGameTab === "single" ? (
@@ -399,11 +400,85 @@ export default function LeagueIndex({league, session}: {league: LeagueObj, sessi
                                     </>
                                 ) : newGameTab === "multiple" ? (
                                     <>
-                                        {bulkGames.map(game => (
-                                            <div className="flex">
-
-                                            </div>
-                                        ))}
+                                        <div className="overflow-y-auto" style={{maxHeight: "calc(100vh - 600px)"}}>
+                                            {bulkGames.map((game, i) => (
+                                                <div className="flex pb-4 border-b my-4 items-center">
+                                                    <div className="pr-2">
+                                                        <p>{i + 1}.</p>
+                                                        <button className="" onClick={() => {
+                                                            let newBulkGames = bulkGames.slice(0);
+                                                            newBulkGames.push({...newBulkGames[i]});
+                                                            setBulkGames(newBulkGames);
+                                                        }}><AiFillCopy/></button>
+                                                        <button className="" onClick={() => {
+                                                            let newBulkGames = bulkGames.slice(0);
+                                                            newBulkGames.splice(i, 1);
+                                                            setBulkGames(newBulkGames);
+                                                        }}><AiFillDelete/></button>
+                                                    </div>
+                                                    <div className="w-64 pr-2">
+                                                        <p>Player 1</p>
+                                                        <Select
+                                                            value={{label: game.player1, value: game.player1}}
+                                                            onChange={selected => {
+                                                                let newBulkGames = bulkGames.slice(0);
+                                                                newBulkGames[i].player1 = selected.value;
+                                                                setBulkGames(newBulkGames);
+                                                            }}
+                                                            options={playerRatings ? playerRatings.map(player => ({label: player.name, value: player.name})) : []}
+                                                            filterOption={({label}) => label !== game.player2}
+                                                            className="w-full my-2"
+                                                            styles={{
+                                                                control: (provided, _) => ({...provided, height: 42 })
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-16 pr-2 flex-shrink-0">
+                                                        <p>Score</p>
+                                                        <ElInput value={game.score1} setValue={value => {
+                                                            let newBulkGames = bulkGames.slice(0);
+                                                            newBulkGames[i].score1 = +value;
+                                                            setBulkGames(newBulkGames);
+                                                        }} type="number"/>
+                                                    </div>
+                                                    <div className="w-64 pr-2">
+                                                        <p>Player 2</p>
+                                                        <Select
+                                                            value={{label: game.player2, value: game.player2}}
+                                                            onChange={selected => {
+                                                                let newBulkGames = bulkGames.slice(0);
+                                                                newBulkGames[i].player2 = selected.value;
+                                                                setBulkGames(newBulkGames);
+                                                            }}
+                                                            options={playerRatings ? playerRatings.map(player => ({label: player.name, value: player.name})) : []}
+                                                            filterOption={({label}) => label !== game.player1}
+                                                            className="w-full my-2"
+                                                            styles={{
+                                                                control: (provided, _) => ({ ...provided, height: 42 })
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="w-16 flex-shrink-0">
+                                                        <p>Score</p>
+                                                        <ElInput value={game.score2} setValue={value => {
+                                                            let newBulkGames = bulkGames.slice(0);
+                                                            newBulkGames[i].score2 = +value;
+                                                            setBulkGames(newBulkGames);
+                                                        }} type="number"/>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                let newBulkGames = bulkGames.slice(0);
+                                                newBulkGames.push({player1: "", score1: 0, player2: "", score2: 0});
+                                                setBulkGames(newBulkGames);
+                                            }}
+                                            className="py-2 my-4 w-full bg-gray-50 border"
+                                        >
+                                            <span>+ Add new game</span>
+                                        </button>
                                     </>
                                 ) : (
                                     <>

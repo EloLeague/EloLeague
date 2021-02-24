@@ -3,6 +3,8 @@ import {getSession} from "next-auth/client";
 import {makecode} from "../../../utils/makecode";
 import {createClient} from "@supabase/supabase-js";
 import {LeagueObj, UserObj} from "../../../utils/types";
+import xkpasswd from "xkpasswd";
+import pwwords from "../../../utils/pwwords";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     // check method
@@ -27,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // create league
     const name = req.body.name;
     const url_name = req.body.urlName;
-    const code = makecode();
+    const code = xkpasswd({wordList: pwwords, separators: "-"});
 
     const user_id = session.userId;
     const description = req.body.description || "";

@@ -25,12 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .or(`player1.eq.${playerName},player2.eq.${playerName}`)
             .order("date", {ascending: false})
             .lte("date", new Date(Date.now() - day * 24 * 60 * 60 * 1000).toISOString())
-            .limit(1)
+            .limit(1);
 
         if (priorGame.length == 0) {
             return null;
         } else {
-            const game = priorGame[0]
+            const game = priorGame[0];
             if (playerName === game.player1) {
                 return elo - game.elo1_after
             } else {
@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     }
 
-    let leagueStandings = []
+    let leagueStandings = [];
     if (league) {
          leagueStandings = await Promise.all(league.players.map(async player => {
             const {data: rating, error: ratingError} = await supabase
@@ -47,8 +47,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .select("elo1_after, elo2_after, player1, player2")
                 .eq("league_id", +req.query.leagueId)
                 .or(`player1.eq.${player},player2.eq.${player}`)
-                .order("date", {ascending: false})
+                .order("id", {ascending: false})
                 .limit(1);
+
+            console.log(rating);
 
             let elo = 1000;
             if (rating.length > 0) {
@@ -71,11 +73,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const changeInElo1 = await getChangeInElo(1, player, elo);
             const changeInElo7 = await getChangeInElo(14, player, elo);
             const changeInElo28 = await getChangeInElo(28, player, elo);
-            let change= {
-                "24h": changeInElo1,
-                "7d":  changeInElo7,
-                "28d" :  changeInElo28
-            }
 
             return ({
                 name: player,
